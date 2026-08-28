@@ -1,28 +1,29 @@
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { info } from "./browser/logger.js";
+import { startMcpHttpServer, logStartupMessage } from "./server/http.js";
 import { browserManager } from "./browser/manager.js";
-import { createServer } from "./server/index.js";
+
+async function shutdown(httpClose: () => Promise<void>): Promise<void> {
+  await httpClose();
+  process.exit(0);
+}
 
 async function main(): Promise<void> {
-  const server = createServer();
-  const transport = new StdioServerTransport();
+  const httpServer = await startMcpHttpServer();
+  logStartupMessage(httpServer.url);
 
-  process.on("SIGINT", async () => {
-    await browserManager.close();
-    process.exit(0);
+  process.on("SIGINT", () => {
+    void shutdown(httpServer.close);
   });
 
-  process.on("SIGTERM", async () => {
-    await browserManager.close();
-    process.exit(0);
+  process.on("SIGTERM", () => {
+    void shutdown(httpServer.close);
   });
-
-  await server.connect(transport);
-  info("Moodle Browser MCP server running on stdio");
 }
 
 main().catch(async (error) => {
-  console.error("Failed to start MCP server:", error instanceof Error ? error.message : error);
+  console.error(
+    "Failed to start MCP server:",
+    error instanceof Error ? error.message : error,
+  );
   await browserManager.close();
   process.exit(1);
 });

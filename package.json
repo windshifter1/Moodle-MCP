@@ -9,6 +9,8 @@
     "start": "tsx src/index.ts",
     "setup": "tsx src/setup.ts",
     "test:browser": "tsx test/browser-layer.test.ts",
+    "test:mcp": "tsx test/http-mcp.test.ts",
+    "test": "npm run test:browser && npm run test:mcp",
     "postinstall": "playwright install chromium"
   },
   "repository": {
@@ -34,6 +36,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^24.3.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"

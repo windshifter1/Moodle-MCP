@@ -36,6 +36,16 @@ export const config = {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean),
+  mcpHost: process.env.MCP_HOST?.trim() || "127.0.0.1",
+  mcpPort: Number.parseInt(process.env.MCP_PORT ?? "3000", 10),
+  mcpPath: "/mcp",
   serverName: "moodle-browser-mcp",
   serverVersion: "1.0.0",
 } as const;
+
+export function getMcpEndpoint(
+  host: string = config.mcpHost,
+  port: number = config.mcpPort,
+): string {
+  return `http://${host}:${port}${config.mcpPath}`;
+}
