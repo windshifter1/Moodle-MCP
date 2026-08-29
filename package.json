@@ -10,6 +10,7 @@
     "setup": "tsx src/setup.ts",
     "test:browser": "tsx test/browser-layer.test.ts",
     "test:mcp": "tsx test/http-mcp.test.ts",
+    "verify:mcp": "tsx scripts/verify-mcp-root.ts",
     "test": "npm run test:browser && npm run test:mcp",
     "postinstall": "playwright install chromium"
   },

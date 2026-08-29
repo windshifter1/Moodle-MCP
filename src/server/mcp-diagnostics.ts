@@ -46,10 +46,7 @@ function extractRpcMethod(body: unknown): string | undefined {
 }
 
 export function shouldLogMcpHttp(): boolean {
-  return (
-    process.env.MCP_HTTP_LOG === "true" ||
-    config.debug
-  );
+  return process.env.MCP_HTTP_LOG !== "false";
 }
 
 export function beginMcpRequestLog(
@@ -99,5 +96,25 @@ export function finishMcpRequestLog(
     isInitialize: context.isInitialize,
     isToolsList: context.isToolsList,
     sessionCreated: context.sessionCreated,
+  });
+}
+
+export function logHttpRequest(req: Request, res: Response): void {
+  if (!shouldLogMcpHttp()) {
+    return;
+  }
+
+  const rpcMethod = extractRpcMethod(req.body);
+
+  res.on("finish", () => {
+    console.error("[moodle-mcp][http] request", {
+      httpMethod: req.method,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      status: res.statusCode,
+      rpcMethod: rpcMethod ?? null,
+      mcpSessionId: headerValue(req.headers["mcp-session-id"]) ?? null,
+      handled: res.statusCode !== 404,
+    });
   });
 }

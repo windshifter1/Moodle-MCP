@@ -10,6 +10,7 @@ import { debug, info } from "../browser/logger.js";
 import {
   beginMcpRequestLog,
   finishMcpRequestLog,
+  logHttpRequest,
 } from "./mcp-diagnostics.js";
 import { createServer } from "./index.js";
 
@@ -34,6 +35,11 @@ export async function startMcpHttpServer(options?: {
   const paths = options?.paths ?? [...config.mcpPaths];
   const app = createMcpExpressApp({ host });
   const transports: Record<string, StreamableTransport> = {};
+
+  app.use((req, res, next) => {
+    logHttpRequest(req, res);
+    next();
+  });
 
   const handlePost = async (req: Request, res: Response): Promise<void> => {
     const logContext = beginMcpRequestLog(req);
@@ -194,4 +200,8 @@ export function logStartupMessage(handle: {
   info(`MCP base URL: ${handle.baseUrl}`);
   info(`MCP endpoint: ${handle.url}`);
   info(`MCP paths: ${handle.paths.join(", ")}`);
+  info(
+    `MCP_PATHS env: ${process.env.MCP_PATHS ?? "(default /,/mcp)"}`,
+  );
+  info("HTTP request logging enabled (set MCP_HTTP_LOG=false to disable)");
 }
