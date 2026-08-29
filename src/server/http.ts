@@ -11,7 +11,9 @@ import {
   beginMcpRequestLog,
   finishMcpRequestLog,
   logHttpRequest,
+  shouldLogMcpHttp,
 } from "./mcp-diagnostics.js";
+import { normalizeMcpRequestPath } from "./path-normalize.js";
 import { createServer } from "./index.js";
 
 type StreamableTransport = StreamableHTTPServerTransport;
@@ -38,6 +40,28 @@ export async function startMcpHttpServer(options?: {
 
   app.use((req, res, next) => {
     logHttpRequest(req, res);
+
+    const originalPath = req.path;
+    const { path: normalizedPath, strippedTunnelPrefix } =
+      normalizeMcpRequestPath(originalPath);
+
+    req.mcpOriginalPath = originalPath;
+    req.mcpStrippedTunnelPrefix = strippedTunnelPrefix;
+
+    if (strippedTunnelPrefix && normalizedPath !== originalPath) {
+      const queryIndex = req.url.indexOf("?");
+      const query = queryIndex >= 0 ? req.url.slice(queryIndex) : "";
+      req.url = `${normalizedPath}${query}`;
+
+      if (shouldLogMcpHttp()) {
+        console.error("[moodle-mcp][mcp-http] normalized tunnel path", {
+          originalPath,
+          normalizedPath,
+          strippedTunnelPrefix,
+        });
+      }
+    }
+
     next();
   });
 
