@@ -16,16 +16,21 @@ const EXPECTED_TOOLS = [
   "browser_download",
 ];
 
-async function main(): Promise<void> {
-  const httpServer = await startMcpHttpServer({ host: "127.0.0.1", port: 0 });
+async function assertFullHandshake(url: string): Promise<void> {
   const client = new Client({
     name: "moodle-mcp-http-test",
     version: "1.0.0",
   });
 
+  const transport = new StreamableHTTPClientTransport(new URL(url));
+
   try {
-    const transport = new StreamableHTTPClientTransport(new URL(httpServer.url));
     await client.connect(transport);
+
+    assert.ok(
+      transport.sessionId,
+      `Expected MCP session ID after initialize at ${url}`,
+    );
 
     const toolsResult = await client.request(
       { method: "tools/list", params: {} },
@@ -33,22 +38,44 @@ async function main(): Promise<void> {
     );
 
     const toolNames = toolsResult.tools.map((tool) => tool.name).sort();
+    assert.equal(toolNames.length, EXPECTED_TOOLS.length);
+
     for (const expectedTool of EXPECTED_TOOLS) {
       assert.ok(
         toolNames.includes(expectedTool),
-        `Expected tool missing: ${expectedTool}`,
+        `Expected tool missing at ${url}: ${expectedTool}`,
       );
     }
 
-    assert.equal(httpServer.url.endsWith("/mcp"), true);
-    console.error(`HTTP MCP smoke test passed (${httpServer.url})`);
   } finally {
     await client.close();
+  }
+}
+
+async function main(): Promise<void> {
+  const httpServer = await startMcpHttpServer({
+    host: "127.0.0.1",
+    port: 0,
+    paths: ["/", "/mcp"],
+  });
+
+  try {
+    const rootUrl = `http://127.0.0.1:${httpServer.port}/`;
+    const mcpUrl = `http://127.0.0.1:${httpServer.port}/mcp`;
+
+    await assertFullHandshake(rootUrl);
+    await assertFullHandshake(mcpUrl);
+
+    console.error("HTTP MCP handshake tests passed");
+    console.error(`  root URL: ${rootUrl}`);
+    console.error(`  /mcp URL: ${mcpUrl}`);
+    console.error(`  session + initialize + notifications/initialized + tools/list verified`);
+  } finally {
     await httpServer.close();
   }
 }
 
 main().catch((error) => {
-  console.error("HTTP MCP smoke test failed:", error);
+  console.error("HTTP MCP handshake tests failed:", error);
   process.exit(1);
 });

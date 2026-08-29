@@ -8,7 +8,7 @@ async function shutdown(httpClose: () => Promise<void>): Promise<void> {
 
 async function main(): Promise<void> {
   const httpServer = await startMcpHttpServer();
-  logStartupMessage(httpServer.url);
+  logStartupMessage(httpServer);
 
   process.on("SIGINT", () => {
     void shutdown(httpServer.close);

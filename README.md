@@ -178,10 +178,17 @@ Open a second PowerShell window:
 
 ```powershell
 cd C:\Users\YourName\Moodle-MCP
-npx poke@latest tunnel http://127.0.0.1:3000/mcp -n "Moodle"
+npx poke@latest tunnel http://127.0.0.1:3000 -n "Moodle"
 ```
 
 This creates a secure tunnel from Poke to the MCP server running on your PC.
+
+The server exposes MCP on both `/` and `/mcp`, so either of these tunnel commands can work:
+
+```powershell
+npx poke@latest tunnel http://127.0.0.1:3000 -n "Moodle"
+npx poke@latest tunnel http://127.0.0.1:3000/mcp -n "Moodle"
+```
 
 The tunnel command is separate from the MCP server. This project does **not** start the tunnel for you.
 
@@ -284,10 +291,19 @@ npm start
 
 Check:
 
-- Terminal 1 shows `MCP endpoint: http://127.0.0.1:3000/mcp`
+- Terminal 1 shows `MCP base URL: http://127.0.0.1:3000/` and `MCP endpoint: http://127.0.0.1:3000/mcp`
 - Terminal 2 tunnel command is running
-- The URL in the tunnel command exactly matches the MCP endpoint
+- The tunnel URL uses either the base server URL (`http://127.0.0.1:3000`) or the explicit MCP path (`http://127.0.0.1:3000/mcp`)
 - Windows Firewall is not blocking local connections
+
+To inspect MCP handshake requests safely, enable diagnostics:
+
+```powershell
+$env:MCP_HTTP_LOG="true"
+npm start
+```
+
+This logs HTTP method, path, MCP headers, JSON-RPC method, response status, and session creation to stderr. It does not log cookies, passwords, or Moodle page content.
 
 ### Tunnel will not start
 
@@ -298,7 +314,7 @@ Check:
 - You typed the tunnel command exactly:
 
 ```powershell
-npx poke@latest tunnel http://127.0.0.1:3000/mcp -n "Moodle"
+npx poke@latest tunnel http://127.0.0.1:3000 -n "Moodle"
 ```
 
 ### Moodle redirects to login

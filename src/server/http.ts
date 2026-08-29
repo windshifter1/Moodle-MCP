@@ -4,34 +4,41 @@ import type { Request, Response } from "express";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import { config } from "../config/index.js";
+import { config, getMcpBaseUrl, getMcpEndpoint } from "../config/index.js";
 import { browserManager } from "../browser/manager.js";
 import { debug, info } from "../browser/logger.js";
+import {
+  beginMcpRequestLog,
+  finishMcpRequestLog,
+} from "./mcp-diagnostics.js";
 import { createServer } from "./index.js";
 
 type StreamableTransport = StreamableHTTPServerTransport;
 
 export interface McpHttpServerHandle {
   url: string;
+  baseUrl: string;
   host: string;
   port: number;
+  paths: string[];
   close: () => Promise<void>;
-}
-
-function getMcpEndpoint(host: string, port: number): string {
-  return `http://${host}:${port}${config.mcpPath}`;
 }
 
 export async function startMcpHttpServer(options?: {
   host?: string;
   port?: number;
+  paths?: string[];
 }): Promise<McpHttpServerHandle> {
   const host = options?.host ?? config.mcpHost;
   const requestedPort = options?.port ?? config.mcpPort;
+  const paths = options?.paths ?? [...config.mcpPaths];
   const app = createMcpExpressApp({ host });
   const transports: Record<string, StreamableTransport> = {};
 
   const handlePost = async (req: Request, res: Response): Promise<void> => {
+    const logContext = beginMcpRequestLog(req);
+    res.on("finish", () => finishMcpRequestLog(res, logContext));
+
     const sessionIdHeader = req.headers["mcp-session-id"];
     const sessionId = Array.isArray(sessionIdHeader)
       ? sessionIdHeader[0]
@@ -47,6 +54,7 @@ export async function startMcpHttpServer(options?: {
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (newSessionId) => {
             transports[newSessionId] = transport!;
+            logContext.sessionCreated = true;
             debug("MCP session initialized", { sessionId: newSessionId });
           },
         });
@@ -96,6 +104,9 @@ export async function startMcpHttpServer(options?: {
   };
 
   const handleGet = async (req: Request, res: Response): Promise<void> => {
+    const logContext = beginMcpRequestLog(req);
+    res.on("finish", () => finishMcpRequestLog(res, logContext));
+
     const sessionIdHeader = req.headers["mcp-session-id"];
     const sessionId = Array.isArray(sessionIdHeader)
       ? sessionIdHeader[0]
@@ -110,6 +121,9 @@ export async function startMcpHttpServer(options?: {
   };
 
   const handleDelete = async (req: Request, res: Response): Promise<void> => {
+    const logContext = beginMcpRequestLog(req);
+    res.on("finish", () => finishMcpRequestLog(res, logContext));
+
     const sessionIdHeader = req.headers["mcp-session-id"];
     const sessionId = Array.isArray(sessionIdHeader)
       ? sessionIdHeader[0]
@@ -123,9 +137,11 @@ export async function startMcpHttpServer(options?: {
     await transports[sessionId].handleRequest(req, res);
   };
 
-  app.post(config.mcpPath, handlePost);
-  app.get(config.mcpPath, handleGet);
-  app.delete(config.mcpPath, handleDelete);
+  for (const mcpPath of paths) {
+    app.post(mcpPath, handlePost);
+    app.get(mcpPath, handleGet);
+    app.delete(mcpPath, handleDelete);
+  }
 
   const httpServer = await new Promise<Server>((resolve, reject) => {
     const server = app.listen(requestedPort, host, () => resolve(server));
@@ -139,11 +155,14 @@ export async function startMcpHttpServer(options?: {
 
   const port = address.port;
   const url = getMcpEndpoint(host, port);
+  const baseUrl = getMcpBaseUrl(host, port);
 
   return {
     url,
+    baseUrl,
     host,
     port,
+    paths,
     close: async () => {
       for (const sessionId of Object.keys(transports)) {
         try {
@@ -166,7 +185,13 @@ export async function startMcpHttpServer(options?: {
   };
 }
 
-export function logStartupMessage(url: string): void {
+export function logStartupMessage(handle: {
+  url: string;
+  baseUrl: string;
+  paths: string[];
+}): void {
   info("Moodle MCP server running");
-  info(`MCP endpoint: ${url}`);
+  info(`MCP base URL: ${handle.baseUrl}`);
+  info(`MCP endpoint: ${handle.url}`);
+  info(`MCP paths: ${handle.paths.join(", ")}`);
 }

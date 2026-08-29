@@ -39,6 +39,10 @@ export const config = {
   mcpHost: process.env.MCP_HOST?.trim() || "127.0.0.1",
   mcpPort: Number.parseInt(process.env.MCP_PORT ?? "3000", 10),
   mcpPath: "/mcp",
+  mcpPaths: (process.env.MCP_PATHS ?? "/,/mcp")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean),
   serverName: "moodle-browser-mcp",
   serverVersion: "1.0.0",
 } as const;
@@ -46,6 +50,14 @@ export const config = {
 export function getMcpEndpoint(
   host: string = config.mcpHost,
   port: number = config.mcpPort,
+  mcpPath: string = config.mcpPath,
 ): string {
-  return `http://${host}:${port}${config.mcpPath}`;
+  return `http://${host}:${port}${mcpPath}`;
+}
+
+export function getMcpBaseUrl(
+  host: string = config.mcpHost,
+  port: number = config.mcpPort,
+): string {
+  return `http://${host}:${port}${config.mcpPaths[0] ?? "/"}`;
 }
