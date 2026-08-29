@@ -61,7 +61,7 @@ async function main(): Promise<void> {
       { method: "tools/list", params: {} },
       ListToolsResultSchema,
     );
-    assert.equal(toolsOnRoot.tools.length, 9);
+    assert.equal(toolsOnRoot.tools.length, 10);
 
     const tunnelPathClient = new Client({
       name: "moodle-mcp-tunnel-path-followup",
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
       { method: "tools/list", params: {} },
       ListToolsResultSchema,
     );
-    assert.equal(toolsOnTunnelPath.tools.length, 9);
+    assert.equal(toolsOnTunnelPath.tools.length, 10);
 
     const callResult = await tunnelPathClient.request(
       {

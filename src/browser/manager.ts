@@ -10,7 +10,8 @@ import { config } from "../config/index.js";
 import { BrowserError } from "./errors.js";
 import { debug, info } from "./logger.js";
 import { type ElementEntry, readPage } from "./reader.js";
-import { assertAuthenticated } from "./session.js";
+import { assertAuthenticated, diagnoseAuthenticationState } from "./session.js";
+import { restoreStorageState, saveStorageState } from "./storage-state.js";
 
 export class BrowserManager {
   private context: BrowserContext | null = null;
@@ -38,12 +39,24 @@ export class BrowserManager {
     return this.page;
   }
 
+  getProfilePath(): string {
+    return this.profilePath;
+  }
+
+  async saveSessionState(): Promise<void> {
+    if (!this.context) {
+      return;
+    }
+
+    await saveStorageState(this.context, this.profilePath);
+  }
+
   async launch(): Promise<void> {
     await fs.mkdir(this.profilePath, { recursive: true });
     await fs.mkdir(config.downloadDir, { recursive: true });
 
     info(
-      `Launching Chromium with persistent profile at ${this.profilePath} (headless=${this.headless})`,
+      `Launching Chromium with persistent profile at ${this.profilePath} (cwd=${process.cwd()}, headless=${this.headless})`,
     );
 
     this.context = await chromium.launchPersistentContext(this.profilePath, {
@@ -53,6 +66,8 @@ export class BrowserManager {
       downloadsPath: config.downloadDir,
       args: ["--disable-dev-shm-usage"],
     });
+
+    await restoreStorageState(this.context, this.profilePath);
 
     this.context.setDefaultTimeout(config.defaultTimeoutMs);
 
@@ -66,6 +81,14 @@ export class BrowserManager {
 
   async close(): Promise<void> {
     if (this.context) {
+      try {
+        await saveStorageState(this.context, this.profilePath);
+      } catch (error) {
+        debug("Could not save browser storage state during shutdown", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
       await this.context.close();
       this.context = null;
       this.page = null;
@@ -112,7 +135,8 @@ export class BrowserManager {
         );
       }
 
-      await assertAuthenticated(page);
+      await assertAuthenticated(page, this.profilePath);
+      await saveStorageState(this.context!, this.profilePath);
       return `Navigated to ${page.url()}`;
     } catch (error) {
       if (error instanceof BrowserError) {
@@ -126,9 +150,15 @@ export class BrowserManager {
     }
   }
 
+  async diagnoseAuthentication(): Promise<string> {
+    const page = await this.ensureReady();
+    const diagnostics = await diagnoseAuthenticationState(page, this.profilePath);
+    return JSON.stringify(diagnostics, null, 2);
+  }
+
   async read(): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const snapshot = await readPage(page);
     this.storeRegistry(snapshot.entries);
@@ -137,7 +167,7 @@ export class BrowserManager {
 
   async click(ref: number): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const entry = this.elementRegistry.get(ref);
     if (!entry) {
@@ -163,7 +193,7 @@ export class BrowserManager {
       }
 
       this.clearRegistry();
-      await assertAuthenticated(await this.ensureReady());
+      await assertAuthenticated(await this.ensureReady(), this.profilePath);
       return `Clicked [${ref}] ${entry.label}. Current URL: ${(await this.ensureReady()).url()}`;
     } catch (error) {
       if (error instanceof BrowserError) {
@@ -179,7 +209,7 @@ export class BrowserManager {
 
   async type(ref: number, text: string, clear = false): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const entry = this.elementRegistry.get(ref);
     if (!entry) {
@@ -208,7 +238,7 @@ export class BrowserManager {
 
   async press(key: string): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
     await page.keyboard.press(key);
     await page.waitForLoadState("domcontentloaded").catch(() => undefined);
     return `Pressed ${key}`;
@@ -216,7 +246,7 @@ export class BrowserManager {
 
   async back(): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const response = await page.goBack({
       waitUntil: "domcontentloaded",
@@ -231,7 +261,7 @@ export class BrowserManager {
     }
 
     this.clearRegistry();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
     return `Went back to ${page.url()}`;
   }
 
@@ -242,7 +272,7 @@ export class BrowserManager {
     networkIdle?: boolean;
   }): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const timeout = options.timeoutMs ?? config.defaultTimeoutMs;
 
@@ -268,7 +298,7 @@ export class BrowserManager {
 
   async screenshot(fullPage = false): Promise<{ pngBase64: string; note: string }> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     const buffer = await page.screenshot({ fullPage, type: "png" });
     return {
@@ -279,7 +309,7 @@ export class BrowserManager {
 
   async download(options: { ref?: number; url?: string }): Promise<string> {
     const page = await this.ensureReady();
-    await assertAuthenticated(page);
+    await assertAuthenticated(page, this.profilePath);
 
     let download: Download;
 

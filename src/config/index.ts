@@ -32,7 +32,7 @@ export const config = {
     10,
   ),
   loginUrlPatterns: (process.env.MOODLE_LOGIN_URL_PATTERNS ??
-    "/login/index.php,/login/")
+    "/login/index.php")
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean),

@@ -6,6 +6,7 @@ import { startMcpHttpServer } from "../src/server/http.js";
 
 const EXPECTED_TOOLS = [
   "browser_navigate",
+  "browser_auth_diagnose",
   "browser_read",
   "browser_click",
   "browser_type",

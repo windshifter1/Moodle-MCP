@@ -19,6 +19,9 @@ async function main(): Promise<void> {
   const manager = new BrowserManager({ headless: false });
 
   try {
+    info(
+      `Setup resolved browser profile: ${manager.getProfilePath()} (cwd=${process.cwd()})`,
+    );
     await manager.launch();
     const page = await manager.ensureReady();
 
@@ -34,7 +37,8 @@ async function main(): Promise<void> {
     );
 
     await promptToClose();
-    info(`Browser profile saved at ${config.browserProfile}`);
+    await manager.saveSessionState();
+    info(`Browser profile saved at ${manager.getProfilePath()}`);
     info("You can now start the MCP server with `npm start`.");
   } finally {
     await manager.close();

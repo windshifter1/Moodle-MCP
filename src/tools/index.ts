@@ -94,6 +94,16 @@ export function registerBrowserTools(
   );
 
   server.registerTool(
+    "browser_auth_diagnose",
+    {
+      description:
+        "Report safe authentication diagnostics for the current browser page: URL, title, login heuristics, and resolved profile path. Never returns cookies, tokens, or passwords.",
+      inputSchema: {},
+    },
+    async () => runTool(() => manager.diagnoseAuthentication()),
+  );
+
+  server.registerTool(
     "browser_read",
     {
       description:
