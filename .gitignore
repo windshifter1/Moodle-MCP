@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.log
+browser-profile/
+browser_data/
+downloads/
+test-results/
+playwright-report/
+playwright/.cache/

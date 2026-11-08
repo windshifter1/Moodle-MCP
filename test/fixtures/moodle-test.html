@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moodle Dashboard (Test Fixture)</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        line-height: 1.5;
+      }
+
+      .section {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .collapsed .content {
+        display: none;
+      }
+
+      button.toggle {
+        margin-bottom: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>My courses</h1>
+    <p id="status">Welcome back, student.</p>
+
+    <section class="section">
+      <h2>Timeline</h2>
+      <ul>
+        <li>Chemistry worksheet due tomorrow</li>
+        <li>English reading quiz due Friday</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Recently accessed courses</h2>
+      <nav aria-label="Course links">
+        <a href="/course/view.php?id=123">Chemistry</a>
+        |
+        <a href="/course/view.php?id=456">English</a>
+      </nav>
+    </section>
+
+    <section class="section collapsed" id="announcements">
+      <button class="toggle" type="button" onclick="toggleSection('announcements')">
+        Show announcements
+      </button>
+      <div class="content">
+        <h3>Latest announcement</h3>
+        <p>Remember to bring your lab coat on Monday.</p>
+      </div>
+    </section>
+
+    <form action="/search" method="get">
+      <label for="search">Search courses</label>
+      <input id="search" name="q" type="search" placeholder="Search courses" />
+      <button type="submit">Search</button>
+    </form>
+
+    <p>
+      <a href="/download/worksheet.pdf" download>Download last week's worksheet</a>
+    </p>
+
+    <script>
+      function toggleSection(id) {
+        const section = document.getElementById(id);
+        section.classList.toggle("collapsed");
+        const button = section.querySelector("button.toggle");
+        button.textContent = section.classList.contains("collapsed")
+          ? "Show announcements"
+          : "Hide announcements";
+      }
+
+      // Simulate delayed AJAX content similar to Moodle dashboards.
+      setTimeout(() => {
+        const status = document.getElementById("status");
+        status.textContent = "Dashboard updated with this week's tasks.";
+      }, 300);
+    </script>
+  </body>
+</html>

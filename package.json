@@ -1,0 +1,47 @@
+{
+  "name": "moodle-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing Playwright browser tools for Moodle via Poke AI",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "setup": "tsx src/setup.ts",
+    "test:browser": "tsx test/browser-layer.test.ts",
+    "test:mcp": "tsx test/http-mcp.test.ts",
+    "test:mcp:tunnel": "tsx test/http-mcp-tunnel-path.test.ts",
+    "test:auth": "tsx test/auth-persistence.test.ts",
+    "verify:mcp": "tsx scripts/verify-mcp-root.ts",
+    "test": "npm run test:browser && npm run test:auth && npm run test:mcp && npm run test:mcp:tunnel",
+    "postinstall": "playwright install chromium"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/windshifter1/Moodle-MCP.git"
+  },
+  "keywords": [
+    "mcp",
+    "moodle",
+    "playwright",
+    "poke"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/windshifter1/Moodle-MCP/issues"
+  },
+  "homepage": "https://github.com/windshifter1/Moodle-MCP#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "dotenv": "^17.2.3",
+    "playwright": "^1.57.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
